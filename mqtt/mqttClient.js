@@ -10,6 +10,8 @@ const {
   getIncidentLogs,
 } = require("../services/incidentService");
 
+const WORKER_STATUS = require("../constants/status");
+
 function connectMQTT(io) {
   const client = mqtt.connect(process.env.MQTT_BROKER_URL);
 
@@ -32,12 +34,12 @@ function connectMQTT(io) {
       await updateWorker(data);
 
       // 사고 로그 저장
-      if (data.status === "danger") {
+      if (data.status === WORKER_STATUS.DANGER) {
         await addIncidentLog({
           workerId: data.workerId,
           workerName: data.workerName,
           message: `${data.location} 쓰러짐 감지`,
-          type: "danger",
+          type: WORKER_STATUS.DANGER,
         });
       }
 
