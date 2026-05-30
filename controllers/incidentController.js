@@ -2,15 +2,20 @@ const {
   getIncidentLogs,
 } = require("../services/incidentService");
 
+const {
+  sendSuccess,
+  sendError,
+} = require("../utils/response");
+
 exports.getIncidentLogs = async (req, res) => {
   try {
     const incidentLogs = await getIncidentLogs();
 
-    res.json(incidentLogs);
+    return sendSuccess(res, incidentLogs);
   } catch (error) {
     console.error("❌ 사고 로그 조회 실패");
     console.error(error);
 
-    res.status(500).json({ message: "사고 로그 조회 실패" });
+    return sendError(res, "사고 로그 조회 실패");
   }
 };

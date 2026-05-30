@@ -21,8 +21,8 @@ connectDB();
 app.use(cors());
 app.use(express.json());
 
-app.use("/workers", workerRoutes);
-app.use("/incidents", incidentRoutes);
+app.use("/api/workers", workerRoutes);
+app.use("/api/incidents", incidentRoutes);
 
 const server = http.createServer(app);
 
