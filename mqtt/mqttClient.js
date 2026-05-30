@@ -10,6 +10,7 @@ const {
   addIncidentStep,
   resolveIncident,
   getIncidentTimeline,
+  getLastIncidentStep,
   getActiveIncidents,
   getActiveIncidentByWorker,
 } = require("../services/incidentService");
@@ -25,7 +26,7 @@ function connectMQTT(io) {
   client.on("connect", () => {
     console.log("✅ MQTT 연결 성공");
 
-    client.subscribe("with-u/alerts/fall", () => {
+    client.subscribe("with-u/workers/status", () => {
       console.log("📡 MQTT 구독 시작");
     });
   });
@@ -49,11 +50,15 @@ function connectMQTT(io) {
       }
 
       if (data.status === WORKER_STATUS.WARNING && activeIncident) {
-        await addIncidentStep(
-          activeIncident.incidentId,
-          INCIDENT_STEP.WAITING_MANAGER,
-          "관리자 확인 대기"
-        );
+        const lastStep = await getLastIncidentStep(activeIncident.incidentId);
+
+        if (!lastStep || lastStep.step !== INCIDENT_STEP.WAITING_MANAGER) {
+          await addIncidentStep(
+            activeIncident.incidentId,
+            INCIDENT_STEP.WAITING_MANAGER,
+            "관리자 확인 대기"
+          );
+        }
       }
 
       if (data.status === WORKER_STATUS.NORMAL && activeIncident) {
@@ -64,13 +69,13 @@ function connectMQTT(io) {
       const workers = await getWorkers();
       const activeIncidents = await getActiveIncidents();
 
-      io.emit("worker-update", workers);
-      io.emit("incident-active", activeIncidents);
+      io.emit("workers:update", workers);
+      io.emit("incidents:active", activeIncidents);
 
       if (activeIncident) {
         const timeline = await getIncidentTimeline(activeIncident.incidentId);
 
-        io.emit("incident-timeline", {
+        io.emit("incidents:timeline", {
           incidentId: activeIncident.incidentId,
           timeline,
         });

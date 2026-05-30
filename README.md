@@ -97,7 +97,7 @@ IMPORTANT:
 ### MQTT Topic
 
 ```txt
-with-u/alerts/fall
+with-u/workers/status
 ```
 
 ### Arduino → Backend MQTT JSON 형식
@@ -215,11 +215,11 @@ Incident 흐름:
 ## 9. Socket.IO 이벤트 명세 (프론트용)
 
 이벤트 목록:
-- worker-update
-- incident-active
-- incident-timeline
+- workers:update
+- incidents:active
+- incidents:timeline
 
-### worker-update payload 예시
+### workers:update payload 예시
 
 ```json
 [
@@ -234,7 +234,7 @@ Incident 흐름:
 ]
 ```
 
-### incident-active payload 예시
+### incidents:active payload 예시
 
 ```json
 [
@@ -251,7 +251,7 @@ Incident 흐름:
 ]
 ```
 
-### incident-timeline payload 예시
+### incidents:timeline payload 예시
 
 ```json
 {
@@ -284,22 +284,22 @@ export default function Dashboard() {
   const [incidentTimeline, setIncidentTimeline] = useState([]);
 
   useEffect(() => {
-    socket.on("worker-update", (payload) => {
+    socket.on("workers:update", (payload) => {
       setWorkers(payload);
     });
 
-    socket.on("incident-active", (payload) => {
+    socket.on("incidents:active", (payload) => {
       setActiveIncidents(payload);
     });
 
-    socket.on("incident-timeline", (payload) => {
+    socket.on("incidents:timeline", (payload) => {
       setIncidentTimeline(payload.timeline || []);
     });
 
     return () => {
-      socket.off("worker-update");
-      socket.off("incident-active");
-      socket.off("incident-timeline");
+      socket.off("workers:update");
+      socket.off("incidents:active");
+      socket.off("incidents:timeline");
     };
   }, []);
 

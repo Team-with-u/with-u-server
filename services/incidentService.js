@@ -96,6 +96,11 @@ async function getIncidentTimeline(incidentId) {
   return logs.map(formatLog);
 }
 
+async function getLastIncidentStep(incidentId) {
+  return IncidentLog.findOne({ incidentId })
+    .sort({ createdAt: -1 });
+}
+
 async function getActiveIncidents() {
   return Incident.find({
     currentStatus: { $ne: INCIDENT_STATUS.RESOLVED },
@@ -114,6 +119,7 @@ module.exports = {
   addIncidentStep,
   resolveIncident,
   getIncidentTimeline,
+  getLastIncidentStep,
   getActiveIncidents,
   getActiveIncidentByWorker,
 };
