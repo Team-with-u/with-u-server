@@ -11,7 +11,7 @@ const {
 } = require("../services/incidentService");
 
 function connectMQTT(io) {
-  const client = mqtt.connect(process.env.MQTT_BROKER);
+  const client = mqtt.connect(process.env.MQTT_BROKER_URL);
 
   client.on("connect", () => {
     console.log("✅ MQTT 연결 성공");
@@ -32,7 +32,7 @@ function connectMQTT(io) {
       await updateWorker(data);
 
       // 사고 로그 저장
-      if (data.status === "fall_detected") {
+      if (data.status === "danger") {
         await addIncidentLog({
           workerId: data.workerId,
           workerName: data.workerName,
@@ -47,6 +47,8 @@ function connectMQTT(io) {
 
       io.emit("worker-update", workers);
       io.emit("incident-logs", incidentLogs);
+
+      console.log("✅ 실시간 데이터 전송 완료");
     } catch (error) {
       console.error("❌ MQTT 메시지 처리 실패");
       console.error(error);
