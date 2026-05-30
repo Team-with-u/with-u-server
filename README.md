@@ -124,9 +124,21 @@ IMPORTANT:
 - JSON 형식 오류 시 서버 처리 실패 가능
 - UTF-8 JSON 기준
 
-## 7. 사고 로그 시스템 설명
+상태 처리 규칙:
+- danger: 활성 Incident 없으면 신규 생성 (incidentId 발급)
+- warning: 활성 Incident에 "관리자 확인 대기" 단계 추가
+- normal: 활성 Incident를 resolved 처리
 
-Backend는 MQTT로 danger 상태가 수신되면 사고 로그를 자동으로 생성하고 MongoDB에 저장합니다.
+## 7. 사고(Incident) 시스템 설명
+
+Backend는 MQTT로 danger 상태가 수신되면 새로운 Incident를 생성하고, 하나의 incidentId로 사고 처리 흐름을 관리합니다.
+
+Incident 흐름:
+- 사고 발생 (detected)
+- 관리자 확인 대기 (waiting_manager)
+- 작업자 호출 (calling_worker)
+- 대응팀 이동 (dispatching_team)
+- 정상 복귀 (resolved)
 
 예시 로그:
 
@@ -144,27 +156,68 @@ Backend는 MQTT로 danger 상태가 수신되면 사고 로그를 자동으로 �
 
 ```json
 {
-  "time": "오후 2:21",
+  "incidentId": "6647f7b7e2d4e0a6c3a2b9f1",
   "workerId": 1,
   "workerName": "김철수",
+  "step": "detected",
   "message": "B구역 쓰러짐 감지",
-  "type": "danger"
+  "time": "오후 2:21"
 }
 ```
 
 | 필드 | 타입 | 설명 |
 | --- | --- | --- |
-| time | String | 로그 생성 시각 (표시용) |
+| incidentId | String | 사고 고유 ID |
 | workerId | Number | 작업자 ID |
 | workerName | String | 작업자 이름 |
+| step | String | 단계 (detected/waiting_manager/calling_worker/dispatching_team/resolved) |
 | message | String | 사고 메시지 |
-| type | String | 사고 유형 (status enum 기반) |
+| time | String | 로그 생성 시각 (표시용) |
+
+## 8-1. Incident 구조 설명
+
+예시 JSON:
+
+```json
+{
+  "incidentId": "6647f7b7e2d4e0a6c3a2b9f1",
+  "workerId": 1,
+  "workerName": "김철수",
+  "location": "B구역",
+  "currentStatus": "processing",
+  "dangerLevel": "danger",
+  "startedAt": "2026-05-30T05:21:00.000Z",
+  "resolvedAt": null
+}
+```
+
+| 필드 | 타입 | 설명 |
+| --- | --- | --- |
+| incidentId | String | 사고 고유 ID |
+| workerId | Number | 작업자 ID |
+| workerName | String | 작업자 이름 |
+| location | String | 발생 위치 |
+| currentStatus | String | 사고 상태 (active/processing/resolved) |
+| dangerLevel | String | 위험 등급 (normal/warning/danger) |
+| startedAt | Date | 사고 발생 시각 |
+| resolvedAt | Date | 정상 복귀 시각 |
+
+## 8-2. Incident 타임라인 예시
+
+```txt
+14:21 detected - B구역 쓰러짐 감지
+14:22 waiting_manager - 관리자 확인 대기
+14:23 calling_worker - 작업자 호출
+14:25 dispatching_team - 대응팀 이동
+14:27 resolved - 정상 복귀
+```
 
 ## 9. Socket.IO 이벤트 명세 (프론트용)
 
 이벤트 목록:
 - worker-update
-- incident-logs
+- incident-active
+- incident-timeline
 
 ### worker-update payload 예시
 
@@ -181,18 +234,40 @@ Backend는 MQTT로 danger 상태가 수신되면 사고 로그를 자동으로 �
 ]
 ```
 
-### incident-logs payload 예시
+### incident-active payload 예시
 
 ```json
 [
   {
-    "time": "14:21",
+    "incidentId": "6647f7b7e2d4e0a6c3a2b9f1",
     "workerId": 1,
     "workerName": "김철수",
-    "message": "B구역 쓰러짐 감지",
-    "type": "danger"
+    "location": "B구역",
+    "currentStatus": "processing",
+    "dangerLevel": "danger",
+    "startedAt": "2026-05-30T05:21:00.000Z",
+    "resolvedAt": null
   }
 ]
+```
+
+### incident-timeline payload 예시
+
+```json
+{
+  "incidentId": "6647f7b7e2d4e0a6c3a2b9f1",
+  "timeline": [
+    {
+      "incidentId": "6647f7b7e2d4e0a6c3a2b9f1",
+      "workerId": 1,
+      "workerName": "김철수",
+      "step": "detected",
+      "message": "B구역 쓰러짐 감지",
+      "time": "14:21",
+      "createdAt": "2026-05-30T05:21:00.000Z"
+    }
+  ]
+}
 ```
 
 ## 10. React Socket.IO 연동 예제
@@ -205,20 +280,26 @@ const socket = io("http://localhost:4000");
 
 export default function Dashboard() {
   const [workers, setWorkers] = useState([]);
-  const [incidentLogs, setIncidentLogs] = useState([]);
+  const [activeIncidents, setActiveIncidents] = useState([]);
+  const [incidentTimeline, setIncidentTimeline] = useState([]);
 
   useEffect(() => {
     socket.on("worker-update", (payload) => {
       setWorkers(payload);
     });
 
-    socket.on("incident-logs", (payload) => {
-      setIncidentLogs(payload);
+    socket.on("incident-active", (payload) => {
+      setActiveIncidents(payload);
+    });
+
+    socket.on("incident-timeline", (payload) => {
+      setIncidentTimeline(payload.timeline || []);
     });
 
     return () => {
       socket.off("worker-update");
-      socket.off("incident-logs");
+      socket.off("incident-active");
+      socket.off("incident-timeline");
     };
   }, []);
 
@@ -226,8 +307,10 @@ export default function Dashboard() {
     <div>
       <h2>Workers</h2>
       <pre>{JSON.stringify(workers, null, 2)}</pre>
-      <h2>Incident Logs</h2>
-      <pre>{JSON.stringify(incidentLogs, null, 2)}</pre>
+      <h2>Active Incidents</h2>
+      <pre>{JSON.stringify(activeIncidents, null, 2)}</pre>
+      <h2>Incident Timeline</h2>
+      <pre>{JSON.stringify(incidentTimeline, null, 2)}</pre>
     </div>
   );
 }
@@ -296,7 +379,7 @@ npm run dev
 
 ### GET /api/incidents
 
-설명: 사고 로그 목록 조회
+설명: 활성 사고 목록 조회
 
 응답 예시:
 
@@ -305,12 +388,48 @@ npm run dev
   "success": true,
   "data": [
     {
-      "time": "14:21",
+      "incidentId": "6647f7b7e2d4e0a6c3a2b9f1",
       "workerId": 1,
       "workerName": "김철수",
-      "message": "B구역 쓰러짐 감지",
-      "type": "danger"
+      "location": "B구역",
+      "currentStatus": "processing",
+      "dangerLevel": "danger",
+      "startedAt": "2026-05-30T05:21:00.000Z",
+      "resolvedAt": null
     }
   ]
 }
 ```
+
+### GET /api/incidents/active
+
+설명: 활성 사고 목록 조회 (별칭)
+
+### GET /api/incidents/{incidentId}/timeline
+
+설명: 사고 타임라인 조회
+
+응답 예시:
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "incidentId": "6647f7b7e2d4e0a6c3a2b9f1",
+      "workerId": 1,
+      "workerName": "김철수",
+      "step": "detected",
+      "message": "B구역 쓰러짐 감지",
+      "time": "14:21",
+      "createdAt": "2026-05-30T05:21:00.000Z"
+    }
+  ]
+}
+```
+
+## MongoDB 컬렉션 구조
+
+- workers: 작업자 상태
+- incidents: 사고 메타데이터 (incidentId, 상태, 위치, 위험도)
+- incidentlogs: 사고 타임라인 로그

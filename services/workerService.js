@@ -1,10 +1,22 @@
 const Worker = require("../models/Worker");
 
+const {
+  WORKER_STATUS,
+} = require("../utils/enums");
+
+function normalizeStatus(status) {
+  if (Object.values(WORKER_STATUS).includes(status)) {
+    return status;
+  }
+
+  return WORKER_STATUS.NORMAL;
+}
+
 async function updateWorker(data) {
   const workerData = {
     workerId: data.workerId,
     workerName: data.workerName,
-    status: data.status,
+    status: normalizeStatus(data.status),
     location: data.location,
     lastMovement: "방금 전",
     incidentCount: data.incidentCount || 0,

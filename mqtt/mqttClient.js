@@ -6,11 +6,18 @@ const {
 } = require("../services/workerService");
 
 const {
-  addIncidentLog,
-  getIncidentLogs,
+  createIncident,
+  addIncidentStep,
+  resolveIncident,
+  getIncidentTimeline,
+  getActiveIncidents,
+  getActiveIncidentByWorker,
 } = require("../services/incidentService");
 
-const WORKER_STATUS = require("../constants/status");
+const {
+  WORKER_STATUS,
+  INCIDENT_STEP,
+} = require("../utils/enums");
 
 function connectMQTT(io) {
   const client = mqtt.connect(process.env.MQTT_BROKER_URL);
@@ -33,22 +40,41 @@ function connectMQTT(io) {
       // 작업자 상태 업데이트
       await updateWorker(data);
 
-      // 사고 로그 저장
+      let activeIncident = await getActiveIncidentByWorker(data.workerId);
+
       if (data.status === WORKER_STATUS.DANGER) {
-        await addIncidentLog({
-          workerId: data.workerId,
-          workerName: data.workerName,
-          message: `${data.location} 쓰러짐 감지`,
-          type: WORKER_STATUS.DANGER,
-        });
+        if (!activeIncident) {
+          activeIncident = await createIncident(data);
+        }
+      }
+
+      if (data.status === WORKER_STATUS.WARNING && activeIncident) {
+        await addIncidentStep(
+          activeIncident.incidentId,
+          INCIDENT_STEP.WAITING_MANAGER,
+          "관리자 확인 대기"
+        );
+      }
+
+      if (data.status === WORKER_STATUS.NORMAL && activeIncident) {
+        await resolveIncident(activeIncident.incidentId);
       }
 
       // 프론트 실시간 전송
       const workers = await getWorkers();
-      const incidentLogs = await getIncidentLogs();
+      const activeIncidents = await getActiveIncidents();
 
       io.emit("worker-update", workers);
-      io.emit("incident-logs", incidentLogs);
+      io.emit("incident-active", activeIncidents);
+
+      if (activeIncident) {
+        const timeline = await getIncidentTimeline(activeIncident.incidentId);
+
+        io.emit("incident-timeline", {
+          incidentId: activeIncident.incidentId,
+          timeline,
+        });
+      }
 
       console.log("✅ 실시간 데이터 전송 완료");
     } catch (error) {

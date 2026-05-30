@@ -1,0 +1,25 @@
+const WORKER_STATUS = {
+  NORMAL: "normal",
+  WARNING: "warning",
+  DANGER: "danger",
+};
+
+const INCIDENT_STATUS = {
+  ACTIVE: "active",
+  PROCESSING: "processing",
+  RESOLVED: "resolved",
+};
+
+const INCIDENT_STEP = {
+  DETECTED: "detected",
+  WAITING_MANAGER: "waiting_manager",
+  CALLING_WORKER: "calling_worker",
+  DISPATCHING_TEAM: "dispatching_team",
+  RESOLVED: "resolved",
+};
+
+module.exports = {
+  WORKER_STATUS,
+  INCIDENT_STATUS,
+  INCIDENT_STEP,
+};
