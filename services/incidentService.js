@@ -1,11 +1,27 @@
-const incidentLogs = [];
+const Incident = require("../models/Incident");
+const getCurrentTime = require("../utils/timeFormatter");
 
-function addIncidentLog(log) {
-  incidentLogs.unshift(log);
+async function addIncidentLog(log) {
+  const incidentData = {
+    workerId: log.workerId,
+    workerName: log.workerName,
+    message: log.message,
+    type: log.type,
+  };
+
+  return Incident.create(incidentData);
 }
 
-function getIncidentLogs() {
-  return incidentLogs;
+async function getIncidentLogs() {
+  const incidents = await Incident.find().sort({ createdAt: -1 });
+
+  return incidents.map((incident) => ({
+    time: getCurrentTime(new Date(incident.createdAt)),
+    workerId: incident.workerId,
+    workerName: incident.workerName,
+    message: incident.message,
+    type: incident.type,
+  }));
 }
 
 module.exports = {

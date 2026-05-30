@@ -1,10 +1,6 @@
-const workers = [];
+const Worker = require("../models/Worker");
 
-function updateWorker(data) {
-  const index = workers.findIndex(
-    (worker) => worker.workerId === data.workerId
-  );
-
+async function updateWorker(data) {
   const workerData = {
     workerId: data.workerId,
     workerName: data.workerName,
@@ -14,15 +10,15 @@ function updateWorker(data) {
     incidentCount: data.incidentCount || 0,
   };
 
-  if (index !== -1) {
-    workers[index] = workerData;
-  } else {
-    workers.push(workerData);
-  }
+  return Worker.findOneAndUpdate(
+    { workerId: data.workerId },
+    workerData,
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
 }
 
-function getWorkers() {
-  return workers;
+async function getWorkers() {
+  return Worker.find().sort({ workerId: 1 });
 }
 
 module.exports = {

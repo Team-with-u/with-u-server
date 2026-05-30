@@ -5,6 +5,8 @@ const http = require("http");
 const cors = require("cors");
 const { Server } = require("socket.io");
 
+const connectDB = require("./db/connectDB");
+
 const connectMQTT = require("./mqtt/mqttClient");
 
 const workerRoutes = require("./routes/workerRoutes");
@@ -13,6 +15,8 @@ const incidentRoutes = require("./routes/incidentRoutes");
 const setupSocket = require("./socket/socketHandler");
 
 const app = express();
+
+connectDB();
 
 app.use(cors());
 app.use(express.json());
