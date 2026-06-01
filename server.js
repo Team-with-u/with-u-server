@@ -36,7 +36,7 @@ setupSocket(io);
 
 connectMQTT(io);
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 8000;
 
 server.listen(PORT, () => {
   console.log(`🚀 WITH-U 서버 실행 : ${PORT}`);
