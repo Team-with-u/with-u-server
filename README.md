@@ -136,6 +136,7 @@ Backend는 MQTT로 danger 상태가 수신되면 새로운 Incident를 생성하
 Incident 흐름:
 - 사고 발생 (detected)
 - 관리자 확인 완료 (acknowledged)
+- 작업자 호출 (calling_worker)
 - 대응팀 이동 (dispatching_team)
 - 상황 종료 (resolved)
 
@@ -144,8 +145,8 @@ Incident 흐름:
 ```txt
 14:21 김OO - B구역 쓰러짐 감지
 14:22 관리자 확인 완료
-14:23 현장 대응팀 이동 중
-14:25 현장 대응팀 도착
+14:23 작업자 호출 신호 전송
+14:25 현장 대응팀 이동 중
 14:27 상황 종료
 ```
 
@@ -169,7 +170,7 @@ Incident 흐름:
 | incidentId | String | 사고 고유 ID |
 | workerId | Number | 작업자 ID |
 | workerName | String | 작업자 이름 |
-| step | String | 단계 (detected/acknowledged/dispatching_team/resolved) |
+| step | String | 단계 (detected/acknowledged/calling_worker/dispatching_team/resolved) |
 | message | String | 사고 메시지 |
 | time | String | 로그 생성 시각 (표시용) |
 
@@ -206,8 +207,8 @@ Incident 흐름:
 ```txt
 14:21 detected - B구역 쓰러짐 감지
 14:22 acknowledged - 관리자 확인 완료
-14:23 dispatching_team - 현장 대응팀 이동 중
-14:25 dispatching_team - 대응팀 이동
+14:23 calling_worker - 작업자 호출 신호 전송
+14:25 dispatching_team - 현장 대응팀 이동
 14:27 resolved - 상황 종료
 ```
 
@@ -412,6 +413,10 @@ npm run dev
 
 설명: 현장 대응 처리
 
+### POST /api/incidents/{incidentId}/call
+
+설명: 작업자 호출 신호 전송
+
 ### POST /api/incidents/{incidentId}/resolve
 
 설명: 상황 종료 처리
@@ -444,3 +449,19 @@ npm run dev
 - workers: 작업자 상태
 - incidents: 사고 메타데이터 (incidentId, 상태, 위치, 위험도)
 - incidentlogs: 사고 타임라인 로그
+
+## MQTT Publish (관리자 액션)
+
+작업자 호출 시 MQTT 메시지 전송:
+
+```txt
+with-u/worker/call
+```
+
+Payload 예시:
+
+```json
+{
+  "workerId": "W001"
+}
+```

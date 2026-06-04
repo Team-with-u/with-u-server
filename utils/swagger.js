@@ -74,7 +74,13 @@ const swaggerSpec = {
           workerName: { type: "string", example: "Kim" },
           step: {
             type: "string",
-            enum: ["detected", "acknowledged", "dispatching_team", "resolved"],
+            enum: [
+              "detected",
+              "acknowledged",
+              "calling_worker",
+              "dispatching_team",
+              "resolved",
+            ],
             example: "detected",
           },
           message: { type: "string", example: "Fall detected" },
@@ -267,6 +273,30 @@ const swaggerSpec = {
       post: {
         tags: ["Incidents"],
         summary: "상황 종료 처리",
+        parameters: [
+          {
+            name: "incidentId",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        responses: {
+          200: {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ApiSuccess" },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/incidents/{incidentId}/call": {
+      post: {
+        tags: ["Incidents"],
+        summary: "작업자 호출",
         parameters: [
           {
             name: "incidentId",

@@ -13,6 +13,7 @@ const INCIDENT_STATUS = {
 const INCIDENT_STEP = {
   DETECTED: "detected",
   ACKNOWLEDGED: "acknowledged",
+  CALLING_WORKER: "calling_worker",
   DISPATCHING_TEAM: "dispatching_team",
   RESOLVED: "resolved",
 };

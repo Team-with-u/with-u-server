@@ -3,11 +3,16 @@ const {
   getIncidentTimeline,
   addIncidentStep,
   resolveIncident,
+  getIncidentById,
 } = require("../services/incidentService");
 
 const {
   INCIDENT_STEP,
 } = require("../utils/enums");
+
+const {
+  publishMessage,
+} = require("../utils/mqttPublisher");
 
 const {
   sendSuccess,
@@ -122,5 +127,35 @@ exports.resolveIncidentController = async (req, res) => {
     console.error(error);
 
     return sendError(res, "상황 종료 처리 실패");
+  }
+};
+
+exports.callWorker = async (req, res) => {
+  try {
+    const { incidentId } = req.params;
+    const incident = await getIncidentById(incidentId);
+
+    if (!incident) {
+      return sendError(res, "사고를 찾을 수 없습니다", 404);
+    }
+
+    await publishMessage("with-u/worker/call", {
+      workerId: incident.workerId,
+    });
+
+    await addIncidentStep(
+      incidentId,
+      INCIDENT_STEP.CALLING_WORKER,
+      "작업자 호출 신호 전송"
+    );
+
+    await emitIncidentUpdates(req, incidentId);
+
+    return sendSuccess(res, { incidentId });
+  } catch (error) {
+    console.error("❌ 작업자 호출 처리 실패");
+    console.error(error);
+
+    return sendError(res, "작업자 호출 처리 실패");
   }
 };

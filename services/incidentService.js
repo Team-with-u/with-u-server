@@ -116,6 +116,10 @@ async function getActiveIncidentByWorker(workerId) {
   }).sort({ startedAt: -1 });
 }
 
+async function getIncidentById(incidentId) {
+  return Incident.findOne({ incidentId });
+}
+
 module.exports = {
   createIncident,
   addIncidentStep,
@@ -124,4 +128,5 @@ module.exports = {
   getLastIncidentStep,
   getActiveIncidents,
   getActiveIncidentByWorker,
+  getIncidentById,
 };
