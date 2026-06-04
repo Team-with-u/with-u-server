@@ -7,7 +7,7 @@ const swaggerSpec = {
   },
   servers: [
     {
-      url: "http://localhost:8000",
+      url: process.env.PUBLIC_BASE_URL || "http://localhost:8000",
     },
   ],
   tags: [
