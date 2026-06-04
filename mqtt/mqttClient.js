@@ -52,11 +52,11 @@ function connectMQTT(io) {
       if (data.status === WORKER_STATUS.WARNING && activeIncident) {
         const lastStep = await getLastIncidentStep(activeIncident.incidentId);
 
-        if (!lastStep || lastStep.step !== INCIDENT_STEP.WAITING_MANAGER) {
+        if (!lastStep || lastStep.step !== INCIDENT_STEP.ACKNOWLEDGED) {
           await addIncidentStep(
             activeIncident.incidentId,
-            INCIDENT_STEP.WAITING_MANAGER,
-            "관리자 확인 대기"
+            INCIDENT_STEP.ACKNOWLEDGED,
+            "관리자 확인 완료"
           );
         }
       }

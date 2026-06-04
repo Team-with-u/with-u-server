@@ -126,7 +126,7 @@ IMPORTANT:
 
 상태 처리 규칙:
 - danger: 활성 Incident 없으면 신규 생성 (incidentId 발급)
-- warning: 활성 Incident에 "관리자 확인 대기" 단계 추가
+- warning: 활성 Incident에 "관리자 확인 완료" 단계 추가
 - normal: 활성 Incident를 resolved 처리
 
 ## 7. 사고(Incident) 시스템 설명
@@ -135,19 +135,18 @@ Backend는 MQTT로 danger 상태가 수신되면 새로운 Incident를 생성하
 
 Incident 흐름:
 - 사고 발생 (detected)
-- 관리자 확인 대기 (waiting_manager)
-- 작업자 호출 (calling_worker)
+- 관리자 확인 완료 (acknowledged)
 - 대응팀 이동 (dispatching_team)
-- 정상 복귀 (resolved)
+- 상황 종료 (resolved)
 
 예시 로그:
 
 ```txt
 14:21 김OO - B구역 쓰러짐 감지
-14:22 관리자 확인 대기
-14:23 작업자 호출 신호 전송
-14:25 현장 대응팀 이동 중
-14:27 B구역 작업자 전원 정상
+14:22 관리자 확인 완료
+14:23 현장 대응팀 이동 중
+14:25 현장 대응팀 도착
+14:27 상황 종료
 ```
 
 ## 8. Incident Log 데이터 구조
@@ -170,7 +169,7 @@ Incident 흐름:
 | incidentId | String | 사고 고유 ID |
 | workerId | Number | 작업자 ID |
 | workerName | String | 작업자 이름 |
-| step | String | 단계 (detected/waiting_manager/calling_worker/dispatching_team/resolved) |
+| step | String | 단계 (detected/acknowledged/dispatching_team/resolved) |
 | message | String | 사고 메시지 |
 | time | String | 로그 생성 시각 (표시용) |
 
@@ -200,16 +199,16 @@ Incident 흐름:
 | currentStatus | String | 사고 상태 (active/processing/resolved) |
 | dangerLevel | String | 위험 등급 (normal/warning/danger) |
 | startedAt | Date | 사고 발생 시각 |
-| resolvedAt | Date | 정상 복귀 시각 |
+| resolvedAt | Date | 상황 종료 시각 |
 
 ## 8-2. Incident 타임라인 예시
 
 ```txt
 14:21 detected - B구역 쓰러짐 감지
-14:22 waiting_manager - 관리자 확인 대기
-14:23 calling_worker - 작업자 호출
+14:22 acknowledged - 관리자 확인 완료
+14:23 dispatching_team - 현장 대응팀 이동 중
 14:25 dispatching_team - 대응팀 이동
-14:27 resolved - 정상 복귀
+14:27 resolved - 상황 종료
 ```
 
 ## 9. Socket.IO 이벤트 명세 (프론트용)
@@ -404,6 +403,18 @@ npm run dev
 ### GET /api/incidents/active
 
 설명: 활성 사고 목록 조회 (별칭)
+
+### POST /api/incidents/{incidentId}/ack
+
+설명: 관리자 확인 완료 처리
+
+### POST /api/incidents/{incidentId}/dispatch
+
+설명: 현장 대응 처리
+
+### POST /api/incidents/{incidentId}/resolve
+
+설명: 상황 종료 처리
 
 ### GET /api/incidents/{incidentId}/timeline
 

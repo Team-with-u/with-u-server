@@ -1,12 +1,44 @@
 const {
   getActiveIncidents,
   getIncidentTimeline,
+  addIncidentStep,
+  resolveIncident,
 } = require("../services/incidentService");
+
+const {
+  INCIDENT_STEP,
+} = require("../utils/enums");
 
 const {
   sendSuccess,
   sendError,
 } = require("../utils/response");
+
+async function emitIncidentUpdates(req, incidentId) {
+  const io = req.app.get("io");
+
+  if (!io) {
+    return;
+  }
+
+  const activeIncidents = await getActiveIncidents();
+
+  io.emit("incidents:active", activeIncidents);
+  io.emit("incident-active", activeIncidents);
+
+  if (incidentId) {
+    const timeline = await getIncidentTimeline(incidentId);
+
+    io.emit("incidents:timeline", {
+      incidentId,
+      timeline,
+    });
+    io.emit("incident-timeline", {
+      incidentId,
+      timeline,
+    });
+  }
+}
 
 exports.getActiveIncidents = async (req, res) => {
   try {
@@ -32,5 +64,63 @@ exports.getIncidentTimeline = async (req, res) => {
     console.error(error);
 
     return sendError(res, "사고 타임라인 조회 실패");
+  }
+};
+
+exports.acknowledgeIncident = async (req, res) => {
+  try {
+    const { incidentId } = req.params;
+
+    await addIncidentStep(
+      incidentId,
+      INCIDENT_STEP.ACKNOWLEDGED,
+      "관리자 확인 완료"
+    );
+
+    await emitIncidentUpdates(req, incidentId);
+
+    return sendSuccess(res, { incidentId });
+  } catch (error) {
+    console.error("❌ 관리자 확인 처리 실패");
+    console.error(error);
+
+    return sendError(res, "관리자 확인 처리 실패");
+  }
+};
+
+exports.dispatchIncident = async (req, res) => {
+  try {
+    const { incidentId } = req.params;
+
+    await addIncidentStep(
+      incidentId,
+      INCIDENT_STEP.DISPATCHING_TEAM,
+      "현장 대응팀 이동 중"
+    );
+
+    await emitIncidentUpdates(req, incidentId);
+
+    return sendSuccess(res, { incidentId });
+  } catch (error) {
+    console.error("❌ 현장 대응 처리 실패");
+    console.error(error);
+
+    return sendError(res, "현장 대응 처리 실패");
+  }
+};
+
+exports.resolveIncidentController = async (req, res) => {
+  try {
+    const { incidentId } = req.params;
+
+    await resolveIncident(incidentId);
+    await emitIncidentUpdates(req, incidentId);
+
+    return sendSuccess(res, { incidentId });
+  } catch (error) {
+    console.error("❌ 상황 종료 처리 실패");
+    console.error(error);
+
+    return sendError(res, "상황 종료 처리 실패");
   }
 };

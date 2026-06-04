@@ -46,14 +46,17 @@ async function createIncident(data) {
   return incident;
 }
 
-async function addIncidentStep(incidentId, step, message) {
+async function addIncidentStep(incidentId, step, message, options = {}) {
   const incident = await Incident.findOne({ incidentId });
 
   if (!incident) {
     return null;
   }
 
-  if (incident.currentStatus !== INCIDENT_STATUS.RESOLVED) {
+  if (
+    incident.currentStatus !== INCIDENT_STATUS.RESOLVED
+    && options.updateStatus !== false
+  ) {
     incident.currentStatus = INCIDENT_STATUS.PROCESSING;
     await incident.save();
   }
@@ -78,13 +81,12 @@ async function resolveIncident(incidentId) {
   incident.resolvedAt = new Date();
   await incident.save();
 
-  await IncidentLog.create({
+  await addIncidentStep(
     incidentId,
-    workerId: incident.workerId,
-    workerName: incident.workerName,
-    step: INCIDENT_STEP.RESOLVED,
-    message: "정상 복귀",
-  });
+    INCIDENT_STEP.RESOLVED,
+    "상황 종료",
+    { updateStatus: false }
+  );
 
   return incident;
 }
