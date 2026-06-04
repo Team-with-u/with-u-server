@@ -98,7 +98,7 @@ const swaggerSpec = {
     "/api/workers": {
       get: {
         tags: ["Workers"],
-        summary: "Get worker status list",
+        summary: "작업자 상태 목록 조회",
         responses: {
           200: {
             description: "OK",
@@ -126,7 +126,7 @@ const swaggerSpec = {
     "/api/incidents": {
       get: {
         tags: ["Incidents"],
-        summary: "Get active incidents",
+        summary: "활성 사고 목록 조회",
         responses: {
           200: {
             description: "OK",
@@ -154,7 +154,7 @@ const swaggerSpec = {
     "/api/incidents/active": {
       get: {
         tags: ["Incidents"],
-        summary: "Get active incidents (alias)",
+        summary: "활성 사고 목록 조회 (별칭)",
         responses: {
           200: {
             description: "OK",
@@ -182,7 +182,7 @@ const swaggerSpec = {
     "/api/incidents/{incidentId}/timeline": {
       get: {
         tags: ["Incidents"],
-        summary: "Get incident timeline",
+        summary: "사고 타임라인 조회",
         parameters: [
           {
             name: "incidentId",
@@ -218,7 +218,7 @@ const swaggerSpec = {
     "/api/incidents/{incidentId}/ack": {
       post: {
         tags: ["Incidents"],
-        summary: "Acknowledge incident",
+        summary: "관리자 확인 완료",
         parameters: [
           {
             name: "incidentId",
@@ -242,7 +242,7 @@ const swaggerSpec = {
     "/api/incidents/{incidentId}/dispatch": {
       post: {
         tags: ["Incidents"],
-        summary: "Dispatch response team",
+        summary: "현장 대응 처리",
         parameters: [
           {
             name: "incidentId",
@@ -266,7 +266,7 @@ const swaggerSpec = {
     "/api/incidents/{incidentId}/resolve": {
       post: {
         tags: ["Incidents"],
-        summary: "Resolve incident",
+        summary: "상황 종료 처리",
         parameters: [
           {
             name: "incidentId",
