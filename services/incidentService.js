@@ -61,13 +61,17 @@ async function addIncidentStep(incidentId, step, message, options = {}) {
     await incident.save();
   }
 
-  return IncidentLog.create({
+  const log = await IncidentLog.create({
     incidentId,
     workerId: incident.workerId,
     workerName: incident.workerName,
     step,
     message,
   });
+
+  console.log("✅ 로그 생성됨", log._id);
+
+  return log;
 }
 
 async function resolveIncident(incidentId) {
