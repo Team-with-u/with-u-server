@@ -32,18 +32,12 @@ function connectMQTT(io) {
     const activeIncidents = await getActiveIncidents();
 
     io.emit("workers:update", workers);
-    io.emit("workers-updated", workers);
     io.emit("incidents:active", activeIncidents);
-    io.emit("incident-active", activeIncidents);
 
     if (incidentId) {
       const timeline = await getIncidentTimeline(incidentId);
 
       io.emit("incidents:timeline", {
-        incidentId,
-        timeline,
-      });
-      io.emit("incident-timeline", {
         incidentId,
         timeline,
       });

@@ -220,11 +220,8 @@ Incident 흐름:
 
 이벤트 목록:
 - `workers:update`
-- `workers-updated`
 - `incidents:active`
-- `incident-active`
 - `incidents:timeline`
-- `incident-timeline`
 
 ### `workers:update` payload 예시
 
@@ -295,15 +292,7 @@ export default function Dashboard() {
       setWorkers(payload);
     });
 
-    socket.on("workers-updated", (payload) => {
-      setWorkers(payload);
-    });
-
     socket.on("incidents:active", (payload) => {
-      setActiveIncidents(payload);
-    });
-
-    socket.on("incident-active", (payload) => {
       setActiveIncidents(payload);
     });
 
@@ -311,17 +300,10 @@ export default function Dashboard() {
       setIncidentTimeline(payload.timeline || []);
     });
 
-    socket.on("incident-timeline", (payload) => {
-      setIncidentTimeline(payload.timeline || []);
-    });
-
     return () => {
       socket.off("workers:update");
-      socket.off("workers-updated");
       socket.off("incidents:active");
-      socket.off("incident-active");
       socket.off("incidents:timeline");
-      socket.off("incident-timeline");
     };
   }, []);
 

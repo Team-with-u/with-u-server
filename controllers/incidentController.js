@@ -29,16 +29,11 @@ async function emitIncidentUpdates(req, incidentId) {
   const activeIncidents = await getActiveIncidents();
 
   io.emit("incidents:active", activeIncidents);
-  io.emit("incident-active", activeIncidents);
 
   if (incidentId) {
     const timeline = await getIncidentTimeline(incidentId);
 
     io.emit("incidents:timeline", {
-      incidentId,
-      timeline,
-    });
-    io.emit("incident-timeline", {
       incidentId,
       timeline,
     });
