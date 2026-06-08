@@ -74,13 +74,7 @@ const swaggerSpec = {
           workerName: { type: "string", example: "Kim" },
           step: {
             type: "string",
-            enum: [
-              "detected",
-              "acknowledged",
-              "calling_worker",
-              "dispatching_team",
-              "resolved",
-            ],
+            enum: ["detected", "acknowledged", "calling_worker", "worker_responded", "dispatching_team", "resolved"],
             example: "detected",
           },
           message: { type: "string", example: "Fall detected" },

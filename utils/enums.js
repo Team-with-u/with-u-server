@@ -14,6 +14,7 @@ const INCIDENT_STEP = {
   DETECTED: "detected",
   ACKNOWLEDGED: "acknowledged",
   CALLING_WORKER: "calling_worker",
+  WORKER_RESPONDED: "worker_responded",
   DISPATCHING_TEAM: "dispatching_team",
   RESOLVED: "resolved",
 };

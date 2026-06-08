@@ -1,30 +1,34 @@
 # WITH-U Industrial Safety Monitoring System
 
+WITH-U는 작업자 상태를 실시간으로 수집하고, 위험 감지와 사고 처리 흐름을 MongoDB와 Socket.IO로 관리하는 산업 안전 관제 시스템입니다.
+
 ## 1. 프로젝트 개요
 
-WITH-U는 작업자 상태를 실시간으로 모니터링하고 위험을 감지해 사고 로그를 기록하며, 대시보드로 즉시 전송하는 산업 안전 관제 시스템입니다.
-
 - 작업자 상태 실시간 모니터링
-- 위험 감지
-- 사고 기록 로그 관리
+- 위험 감지 및 사고 생성
+- 관리자 액션 기반 사고 처리
+- 작업자 호출 및 작업자 응답 처리
+- 사고 타임라인 관리
 - 실시간 대시보드 전송
 
 ## 2. 전체 시스템 구조
 
+```txt
 Arduino 센서
 → MQTT Broker
 → Node.js Backend
 → MongoDB Atlas 저장
 → Socket.IO 실시간 전송
 → React Dashboard
+```
 
 역할 설명:
-- Arduino 센서: 작업자 상태 데이터를 수집해 MQTT로 전송
-- MQTT Broker: 센서 데이터를 안정적으로 중계
-- Node.js Backend: 수신 데이터 처리, 상태/사고 로그 저장 및 이벤트 전송
-- MongoDB Atlas: 작업자 상태 및 사고 로그 영구 저장
-- Socket.IO: 프론트 대시보드에 실시간 데이터 스트리밍
-- React Dashboard: 실시간 상태 및 사고 로그 시각화
+- Arduino 센서: 작업자 상태를 MQTT로 전송
+- MQTT Broker: 센서 메시지를 중계
+- Node.js Backend: MQTT 수신, DB 저장, 사고 처리, Socket.IO 전송
+- MongoDB Atlas: 작업자/사고/로그 데이터 영구 저장
+- Socket.IO: 프론트 대시보드에 실시간 데이터 전송
+- React Dashboard: 상태와 사고 타임라인 시각화
 
 ## 3. 폴더 구조 설명
 
@@ -41,13 +45,13 @@ mqtt/
 ```
 
 - mqtt/: MQTT 수신 및 처리 로직
-- socket/: Socket.IO 연결 및 이벤트 처리
+- socket/: Socket.IO 연결 처리
 - routes/: REST API 라우터
-- controllers/: REST API 컨트롤러 (입출력 처리)
+- controllers/: 요청/응답 처리
 - services/: 비즈니스 로직 및 DB 접근
 - models/: Mongoose 스키마
-- utils/: 공용 유틸 함수
-- logs/: 로그 파일 저장 공간
+- utils/: 공용 유틸 및 enum
+- logs/: 로그 저장 공간
 - server.js: 서버 엔트리 포인트
 
 ## 4. Worker 데이터 구조 명세
@@ -58,7 +62,7 @@ mqtt/
 {
   "workerId": 1,
   "workerName": "김철수",
-  "status": "danger",
+  "status": "normal",
   "location": "A구역",
   "lastMovement": "방금 전",
   "incidentCount": 0
@@ -69,7 +73,7 @@ mqtt/
 | --- | --- | --- |
 | workerId | Number | 작업자 고유 ID |
 | workerName | String | 작업자 이름 |
-| status | String | 작업자 상태 (enum) |
+| status | String | 작업자 상태 (`normal` / `warning` / `danger`) |
 | location | String | 현재 위치 |
 | lastMovement | String | 마지막 움직임 시간 표시 |
 | incidentCount | Number | 누적 사고 횟수 |
@@ -77,9 +81,9 @@ mqtt/
 ## 5. status enum 명세
 
 현재 상태 enum:
-- normal
-- warning
-- danger
+- `normal`
+- `warning`
+- `danger`
 
 | 상태 | 의미 | 프론트 색상 |
 | --- | --- | --- |
@@ -106,7 +110,7 @@ with-u/workers/status
 {
   "workerId": 1,
   "workerName": "김철수",
-  "status": "normal",
+  "status": "danger",
   "location": "B구역",
   "incidentCount": 1
 }
@@ -125,29 +129,30 @@ IMPORTANT:
 - UTF-8 JSON 기준
 
 상태 처리 규칙:
-- danger: 활성 Incident 없으면 신규 생성 (incidentId 발급)
-- warning: 활성 Incident에 "관리자 확인 완료" 단계 추가
+- danger: 활성 Incident 없으면 신규 생성
+- warning: 활성 Incident에 `관리자 확인 완료` 단계 추가
 - normal: 활성 Incident를 resolved 처리
 
 ## 7. 사고(Incident) 시스템 설명
 
-Backend는 MQTT로 danger 상태가 수신되면 새로운 Incident를 생성하고, 하나의 incidentId로 사고 처리 흐름을 관리합니다.
+Backend는 MQTT로 `danger` 상태가 수신되면 새로운 Incident를 생성하고, 하나의 `incidentId`로 사고 처리 흐름을 관리합니다.
 
 Incident 흐름:
-- 사고 발생 (detected)
-- 관리자 확인 완료 (acknowledged)
-- 작업자 호출 (calling_worker)
-- 대응팀 이동 (dispatching_team)
-- 상황 종료 (resolved)
+- 사고 발생 (`detected`)
+- 관리자 확인 완료 (`acknowledged`)
+- 작업자 호출 (`calling_worker`)
+- 작업자 응답 확인 (`worker_responded`)
+- 대응팀 이동 (`dispatching_team`)
+- 상황 종료 (`resolved`)
 
 예시 로그:
 
 ```txt
-14:21 김OO - B구역 쓰러짐 감지
+14:21 쓰러짐 감지
 14:22 관리자 확인 완료
 14:23 작업자 호출 신호 전송
-14:25 현장 대응팀 이동 중
-14:27 상황 종료
+14:24 작업자 응답 확인
+14:24 사고 자동 종료
 ```
 
 ## 8. Incident Log 데이터 구조
@@ -170,7 +175,7 @@ Incident 흐름:
 | incidentId | String | 사고 고유 ID |
 | workerId | Number | 작업자 ID |
 | workerName | String | 작업자 이름 |
-| step | String | 단계 (detected/acknowledged/calling_worker/dispatching_team/resolved) |
+| step | String | 단계 (`detected` / `acknowledged` / `calling_worker` / `worker_responded` / `dispatching_team` / `resolved`) |
 | message | String | 사고 메시지 |
 | time | String | 로그 생성 시각 (표시용) |
 
@@ -197,29 +202,32 @@ Incident 흐름:
 | workerId | Number | 작업자 ID |
 | workerName | String | 작업자 이름 |
 | location | String | 발생 위치 |
-| currentStatus | String | 사고 상태 (active/processing/resolved) |
-| dangerLevel | String | 위험 등급 (normal/warning/danger) |
+| currentStatus | String | 사고 상태 (`active` / `processing` / `resolved`) |
+| dangerLevel | String | 위험 등급 (`normal` / `warning` / `danger`) |
 | startedAt | Date | 사고 발생 시각 |
 | resolvedAt | Date | 상황 종료 시각 |
 
 ## 8-2. Incident 타임라인 예시
 
 ```txt
-14:21 detected - B구역 쓰러짐 감지
+14:21 detected - 쓰러짐 감지
 14:22 acknowledged - 관리자 확인 완료
 14:23 calling_worker - 작업자 호출 신호 전송
-14:25 dispatching_team - 현장 대응팀 이동
-14:27 resolved - 상황 종료
+14:24 worker_responded - 작업자 응답 확인
+14:24 resolved - 사고 자동 종료
 ```
 
 ## 9. Socket.IO 이벤트 명세 (프론트용)
 
 이벤트 목록:
-- workers:update
-- incidents:active
-- incidents:timeline
+- `workers:update`
+- `workers-updated`
+- `incidents:active`
+- `incident-active`
+- `incidents:timeline`
+- `incident-timeline`
 
-### workers:update payload 예시
+### `workers:update` payload 예시
 
 ```json
 [
@@ -234,7 +242,7 @@ Incident 흐름:
 ]
 ```
 
-### incidents:active payload 예시
+### `incidents:active` payload 예시
 
 ```json
 [
@@ -251,7 +259,7 @@ Incident 흐름:
 ]
 ```
 
-### incidents:timeline payload 예시
+### `incidents:timeline` payload 예시
 
 ```json
 {
@@ -276,7 +284,7 @@ Incident 흐름:
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 
-const socket = io("http://localhost:4000");
+const socket = io("http://localhost:8000");
 
 export default function Dashboard() {
   const [workers, setWorkers] = useState([]);
@@ -288,7 +296,15 @@ export default function Dashboard() {
       setWorkers(payload);
     });
 
+    socket.on("workers-updated", (payload) => {
+      setWorkers(payload);
+    });
+
     socket.on("incidents:active", (payload) => {
+      setActiveIncidents(payload);
+    });
+
+    socket.on("incident-active", (payload) => {
       setActiveIncidents(payload);
     });
 
@@ -296,10 +312,17 @@ export default function Dashboard() {
       setIncidentTimeline(payload.timeline || []);
     });
 
+    socket.on("incident-timeline", (payload) => {
+      setIncidentTimeline(payload.timeline || []);
+    });
+
     return () => {
       socket.off("workers:update");
+      socket.off("workers-updated");
       socket.off("incidents:active");
+      socket.off("incident-active");
       socket.off("incidents:timeline");
+      socket.off("incident-timeline");
     };
   }, []);
 
@@ -327,14 +350,16 @@ MongoDB Atlas를 사용하는 이유:
 ## 12. 환경변수 설정
 
 ```env
-PORT=4000
+PORT=8000
 MONGO_URI=your_mongodb_uri
 MQTT_BROKER_URL=mqtt://broker.emqx.io:1883
+PUBLIC_BASE_URL=http://localhost:8000
 ```
 
 - PORT: 서버 포트
 - MONGO_URI: MongoDB Atlas 연결 문자열
 - MQTT_BROKER_URL: MQTT 브로커 주소
+- PUBLIC_BASE_URL: Swagger 서버 표시용 URL
 
 ## 13. 실행 방법
 
@@ -351,11 +376,13 @@ npm run dev
 - [x] 사고 로그 저장
 - [x] Socket.IO 실시간 전송
 - [x] 상태 enum 시스템
-- [x] 실시간 대시보드 데이터 송신
+- [x] 관리자 액션 API
+- [x] 작업자 응답 자동 종료
+- [x] Swagger UI 제공
 
 ## REST API 명세
 
-### GET /api/workers
+### `GET /api/workers`
 
 설명: 현재 작업자 상태 목록 조회
 
@@ -377,7 +404,7 @@ npm run dev
 }
 ```
 
-### GET /api/incidents
+### `GET /api/incidents`
 
 설명: 활성 사고 목록 조회
 
@@ -401,67 +428,67 @@ npm run dev
 }
 ```
 
-### GET /api/incidents/active
+### `GET /api/incidents/active`
 
 설명: 활성 사고 목록 조회 (별칭)
 
-### POST /api/incidents/{incidentId}/ack
-
-설명: 관리자 확인 완료 처리
-
-### POST /api/incidents/{incidentId}/dispatch
-
-설명: 현장 대응 처리
-
-### POST /api/incidents/{incidentId}/call
-
-설명: 작업자 호출 신호 전송
-
-### POST /api/incidents/{incidentId}/resolve
-
-설명: 상황 종료 처리
-
-### GET /api/incidents/{incidentId}/timeline
+### `GET /api/incidents/{incidentId}/timeline`
 
 설명: 사고 타임라인 조회
 
-응답 예시:
+### `POST /api/incidents/{incidentId}/ack`
 
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "incidentId": "6647f7b7e2d4e0a6c3a2b9f1",
-      "workerId": 1,
-      "workerName": "김철수",
-      "step": "detected",
-      "message": "B구역 쓰러짐 감지",
-      "time": "14:21",
-      "createdAt": "2026-05-30T05:21:00.000Z"
-    }
-  ]
-}
-```
+설명: 관리자 확인 완료 처리
+
+### `POST /api/incidents/{incidentId}/call`
+
+설명: 작업자 호출 신호 전송
+
+### `POST /api/incidents/{incidentId}/dispatch`
+
+설명: 현장 대응 처리
+
+### `POST /api/incidents/{incidentId}/resolve`
+
+설명: 상황 종료 처리
 
 ## MongoDB 컬렉션 구조
 
-- workers: 작업자 상태
-- incidents: 사고 메타데이터 (incidentId, 상태, 위치, 위험도)
-- incidentlogs: 사고 타임라인 로그
+- `workers`: 작업자 상태
+- `incidents`: 사고 메타데이터
+- `incidentlogs`: 사고 타임라인 로그
 
-## MQTT Publish (관리자 액션)
+## MQTT Topic
 
-작업자 호출 시 MQTT 메시지 전송:
+- `with-u/workers/status`
+- `with-u/worker/call`
+- `with-u/worker/response`
 
-```txt
-with-u/worker/call
-```
-
-Payload 예시:
+### `with-u/workers/status` 예시
 
 ```json
 {
-  "workerId": "W001"
+  "workerId": 1,
+  "workerName": "김철수",
+  "status": "danger",
+  "location": "B구역",
+  "incidentCount": 1
+}
+```
+
+### `with-u/worker/call` 예시
+
+```json
+{
+  "workerId": 1
+}
+```
+
+### `with-u/worker/response` 예시
+
+```json
+{
+  "workerId": 1,
+  "response": "safe"
 }
 ```

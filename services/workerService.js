@@ -33,7 +33,16 @@ async function getWorkers() {
   return Worker.find().sort({ workerId: 1 });
 }
 
+async function restoreWorkerStatus(workerId) {
+  return Worker.findOneAndUpdate(
+    { workerId },
+    { status: WORKER_STATUS.NORMAL },
+    { new: true }
+  );
+}
+
 module.exports = {
   updateWorker,
   getWorkers,
+  restoreWorkerStatus,
 };
