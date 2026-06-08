@@ -3,6 +3,9 @@ const mongoose = require("mongoose");
 const Incident = require("../models/Incident");
 const IncidentLog = require("../models/IncidentLog");
 const getCurrentTime = require("../utils/timeFormatter");
+const {
+  restoreWorkerStatus,
+} = require("../services/workerService");
 
 const {
   INCIDENT_STATUS,
@@ -80,6 +83,8 @@ async function resolveIncident(incidentId) {
   if (!incident || incident.currentStatus === INCIDENT_STATUS.RESOLVED) {
     return null;
   }
+
+  await restoreWorkerStatus(incident.workerId);
 
   incident.currentStatus = INCIDENT_STATUS.RESOLVED;
   incident.resolvedAt = new Date();

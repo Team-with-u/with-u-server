@@ -16,10 +16,6 @@ const {
 } = require("../services/incidentService");
 
 const {
-  restoreWorkerStatus,
-} = require("../services/workerService");
-
-const {
   WORKER_STATUS,
   INCIDENT_STEP,
 } = require("../utils/enums");
@@ -119,7 +115,6 @@ function connectMQTT(io) {
           );
         }
 
-        await restoreWorkerStatus(data.workerId);
         await resolveIncident(activeIncident.incidentId);
 
         await emitIncidentState(activeIncident.incidentId);
