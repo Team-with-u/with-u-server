@@ -403,6 +403,60 @@ npm run dev
 }
 ```
 
+### `GET /api/workers/{workerId}/incidents`
+
+설명: 작업자별 사고 이력과 각 사고의 타임라인을 함께 조회
+
+응답 예시:
+
+```json
+{
+  "success": true,
+  "data": {
+    "workerId": 1,
+    "workerName": "김철수",
+    "totalCount": 2,
+    "incidents": [
+      {
+        "incidentId": "INC001",
+        "status": "resolved",
+        "location": "B구역",
+        "createdAt": "2025-06-01T14:21:00Z",
+        "resolvedAt": "2025-06-01T14:24:00Z",
+        "duration": 180,
+        "logs": [
+          {
+            "step": "detected",
+            "message": "쓰러짐 감지",
+            "createdAt": "2025-06-01T14:21:00Z"
+          },
+          {
+            "step": "acknowledged",
+            "message": "관리자 확인 완료",
+            "createdAt": "2025-06-01T14:22:00Z"
+          },
+          {
+            "step": "calling_worker",
+            "message": "작업자 호출 신호 전송",
+            "createdAt": "2025-06-01T14:23:00Z"
+          },
+          {
+            "step": "worker_responded",
+            "message": "작업자 응답 확인",
+            "createdAt": "2025-06-01T14:24:00Z"
+          },
+          {
+            "step": "resolved",
+            "message": "사고 종료",
+            "createdAt": "2025-06-01T14:24:00Z"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
 ### `GET /api/incidents`
 
 설명: 활성 사고 목록 조회

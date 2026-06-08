@@ -92,6 +92,48 @@ const swaggerSpec = {
           },
         },
       },
+      WorkerIncidentLog: {
+        type: "object",
+        properties: {
+          step: {
+            type: "string",
+            enum: ["detected", "acknowledged", "calling_worker", "worker_responded", "dispatching_team", "resolved"],
+            example: "detected",
+          },
+          message: { type: "string", example: "B구역 쓰러짐 감지" },
+          createdAt: { type: "string", format: "date-time" },
+        },
+      },
+      WorkerIncidentHistory: {
+        type: "object",
+        properties: {
+          workerId: { type: "number", example: 1 },
+          workerName: { type: "string", example: "김철수" },
+          totalCount: { type: "number", example: 2 },
+          incidents: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                incidentId: { type: "string", example: "INC001" },
+                status: {
+                  type: "string",
+                  enum: ["active", "processing", "resolved"],
+                  example: "resolved",
+                },
+                location: { type: "string", example: "B구역" },
+                createdAt: { type: "string", format: "date-time" },
+                resolvedAt: { type: "string", format: "date-time", nullable: true },
+                duration: { type: "number", example: 180 },
+                logs: {
+                  type: "array",
+                  items: { $ref: "#/components/schemas/WorkerIncidentLog" },
+                },
+              },
+            },
+          },
+        },
+      },
     },
   },
   paths: {
@@ -113,6 +155,39 @@ const swaggerSpec = {
                           type: "array",
                           items: { $ref: "#/components/schemas/Worker" },
                         },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/workers/{workerId}/incidents": {
+      get: {
+        tags: ["Workers"],
+        summary: "작업자별 사고 이력 상세 조회",
+        parameters: [
+          {
+            name: "workerId",
+            in: "path",
+            required: true,
+            schema: { type: "number" },
+          },
+        ],
+        responses: {
+          200: {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: {
+                  allOf: [
+                    { $ref: "#/components/schemas/ApiSuccess" },
+                    {
+                      properties: {
+                        data: { $ref: "#/components/schemas/WorkerIncidentHistory" },
                       },
                     },
                   ],
