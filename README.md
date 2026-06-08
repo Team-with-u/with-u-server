@@ -33,14 +33,14 @@ Arduino 센서
 ## 3. 폴더 구조 설명
 
 ```txt
-mqtt/
+WITH-U-SERVER/
+├── mqtt/
 ├── socket/
 ├── routes/
 ├── controllers/
 ├── services/
 ├── models/
 ├── utils/
-├── logs/
 └── server.js
 ```
 
@@ -51,7 +51,6 @@ mqtt/
 - services/: 비즈니스 로직 및 DB 접근
 - models/: Mongoose 스키마
 - utils/: 공용 유틸 및 enum
-- logs/: 로그 저장 공간
 - server.js: 서버 엔트리 포인트
 
 ## 4. Worker 데이터 구조 명세
