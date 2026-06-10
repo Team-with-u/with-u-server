@@ -43,6 +43,14 @@ const swaggerSpec = {
           location: { type: "string", example: "A-zone" },
           lastMovement: { type: "string", example: "just now" },
           incidentCount: { type: "number", example: 0 },
+          callStatus: {
+            type: "string",
+            enum: ["idle", "calling", "responded"],
+            example: "idle",
+          },
+          lastCallAt: { type: "string", format: "date-time", nullable: true },
+          lastResponseAt: { type: "string", format: "date-time", nullable: true },
+          responseSeconds: { type: "number", nullable: true, example: 7 },
         },
       },
       Incident: {

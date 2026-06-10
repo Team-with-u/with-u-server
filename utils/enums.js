@@ -4,6 +4,12 @@ const WORKER_STATUS = {
   DANGER: "danger",
 };
 
+const WORKER_CALL_STATUS = {
+  IDLE: "idle",
+  CALLING: "calling",
+  RESPONDED: "responded",
+};
+
 const INCIDENT_STATUS = {
   ACTIVE: "active",
   PROCESSING: "processing",
@@ -21,6 +27,7 @@ const INCIDENT_STEP = {
 
 module.exports = {
   WORKER_STATUS,
+  WORKER_CALL_STATUS,
   INCIDENT_STATUS,
   INCIDENT_STEP,
 };

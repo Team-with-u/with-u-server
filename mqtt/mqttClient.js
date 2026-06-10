@@ -3,6 +3,7 @@ const mqtt = require("mqtt");
 const {
   updateWorker,
   getWorkers,
+  markWorkerResponded,
 } = require("../services/workerService");
 
 const {
@@ -98,10 +99,13 @@ function connectMQTT(io) {
           return;
         }
 
+        await markWorkerResponded(data.workerId);
+        io.emit("workers:update", await getWorkers());
+
         const activeIncident = await getActiveIncidentByWorkerId(data.workerId);
 
         if (!activeIncident) {
-          console.log("ℹ️ 활성 사고가 없어 작업자 응답을 무시함");
+          console.log("ℹ️ 활성 사고는 없지만 작업자 응답 상태를 업데이트함");
           return;
         }
 

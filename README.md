@@ -64,7 +64,11 @@ WITH-U-SERVER/
   "status": "normal",
   "location": "A구역",
   "lastMovement": "방금 전",
-  "incidentCount": 0
+  "incidentCount": 0,
+  "callStatus": "idle",
+  "lastCallAt": null,
+  "lastResponseAt": null,
+  "responseSeconds": null
 }
 ```
 
@@ -76,6 +80,10 @@ WITH-U-SERVER/
 | location | String | 현재 위치 |
 | lastMovement | String | 마지막 움직임 시간 표시 |
 | incidentCount | Number | 누적 사고 횟수 |
+| callStatus | String | 작업자 호출 응답 상태 (`idle` / `calling` / `responded`) |
+| lastCallAt | Date | 최근 작업자 호출 시간 |
+| lastResponseAt | Date | 최근 작업자 응답 시간 |
+| responseSeconds | Number | 최근 호출부터 응답까지 걸린 시간(초) |
 
 ## 5. status enum 명세
 
@@ -94,6 +102,13 @@ IMPORTANT:
 - Arduino 측은 반드시 이 enum 값만 MQTT로 전송해야 함
 - Backend는 enum 기반으로 처리함
 - Frontend는 enum 기준으로 UI 색상 처리함
+
+### callStatus enum 명세
+
+작업자 호출 응답 상태 enum:
+- `idle`: 대기중
+- `calling`: 호출 중
+- `responded`: 응답 완료
 
 ## 6. MQTT 통신 명세 (아두이노용)
 
@@ -233,7 +248,11 @@ Incident 흐름:
     "status": "normal",
     "location": "A구역",
     "lastMovement": "방금 전",
-    "incidentCount": 0
+    "incidentCount": 0,
+    "callStatus": "responded",
+    "lastCallAt": "2026-06-10T05:21:00.000Z",
+    "lastResponseAt": "2026-06-10T05:21:07.000Z",
+    "responseSeconds": 7
   }
 ]
 ```
@@ -282,6 +301,22 @@ import { io } from "socket.io-client";
 
 const socket = io("http://localhost:8000");
 
+const callStatusLabel = {
+  idle: "대기중",
+  calling: "호출 중",
+  responded: "응답 완료",
+};
+
+function formatCallStatus(worker) {
+  const label = callStatusLabel[worker.callStatus] || "대기중";
+
+  if (worker.callStatus === "responded" && worker.responseSeconds !== null) {
+    return `${label} (${worker.responseSeconds}초)`;
+  }
+
+  return label;
+}
+
 export default function Dashboard() {
   const [workers, setWorkers] = useState([]);
   const [activeIncidents, setActiveIncidents] = useState([]);
@@ -309,8 +344,29 @@ export default function Dashboard() {
 
   return (
     <div>
-      <h2>Workers</h2>
-      <pre>{JSON.stringify(workers, null, 2)}</pre>
+      <h2>실시간 작업자 상세 현황</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>이름</th>
+            <th>상태</th>
+            <th>위치</th>
+            <th>최근 활동</th>
+            <th>호출 응답 상태</th>
+          </tr>
+        </thead>
+        <tbody>
+          {workers.map((worker) => (
+            <tr key={worker.workerId}>
+              <td>{worker.workerName}</td>
+              <td>{worker.status}</td>
+              <td>{worker.location}</td>
+              <td>{worker.lastMovement}</td>
+              <td>{formatCallStatus(worker)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
       <h2>Active Incidents</h2>
       <pre>{JSON.stringify(activeIncidents, null, 2)}</pre>
       <h2>Incident Timeline</h2>
@@ -359,6 +415,7 @@ npm run dev
 - [x] 상태 enum 시스템
 - [x] 관리자 액션 API
 - [x] 작업자 응답 자동 종료
+- [x] 작업자 호출 응답 상태 실시간 표시
 - [x] Swagger UI 제공
 
 ## REST API 명세
@@ -379,7 +436,11 @@ npm run dev
       "status": "normal",
       "location": "A구역",
       "lastMovement": "방금 전",
-      "incidentCount": 0
+      "incidentCount": 0,
+      "callStatus": "responded",
+      "lastCallAt": "2026-06-10T05:21:00.000Z",
+      "lastResponseAt": "2026-06-10T05:21:07.000Z",
+      "responseSeconds": 7
     }
   ]
 }
@@ -519,11 +580,30 @@ npm run dev
 }
 ```
 
+관리자 호출 API는 MQTT publish 전에 해당 Worker를 아래 상태로 저장하고 `workers:update` 이벤트를 전송합니다.
+
+```json
+{
+  "callStatus": "calling",
+  "lastCallAt": "2026-06-10T05:21:00.000Z"
+}
+```
+
 ### `with-u/worker/response` 예시
 
 ```json
 {
   "workerId": 1,
   "response": "safe"
+}
+```
+
+서버가 `safe` 응답을 수신하면 해당 Worker를 아래 상태로 저장하고 `workers:update` 이벤트를 전송합니다. `responseSeconds`는 `(lastResponseAt - lastCallAt) / 1000` 기준으로 계산되어 `GET /api/workers`와 Socket payload에 포함됩니다.
+
+```json
+{
+  "callStatus": "responded",
+  "lastResponseAt": "2026-06-10T05:21:07.000Z",
+  "responseSeconds": 7
 }
 ```

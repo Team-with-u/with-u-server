@@ -4,6 +4,7 @@ const IncidentLog = require("../models/IncidentLog");
 
 const {
   WORKER_STATUS,
+  WORKER_CALL_STATUS,
 } = require("../utils/enums");
 
 function formatIncidentLog(log) {
@@ -22,6 +23,27 @@ function normalizeStatus(status) {
   return WORKER_STATUS.NORMAL;
 }
 
+function formatWorker(worker) {
+  if (!worker) {
+    return null;
+  }
+
+  const data = worker.toObject ? worker.toObject() : worker;
+
+  return {
+    ...data,
+    responseSeconds:
+      data.lastCallAt && data.lastResponseAt
+        ? Math.max(
+            0,
+            Math.floor(
+              (new Date(data.lastResponseAt).getTime() - new Date(data.lastCallAt).getTime()) / 1000
+            )
+          )
+        : null,
+  };
+}
+
 async function updateWorker(data) {
   const workerData = {
     workerId: data.workerId,
@@ -32,23 +54,55 @@ async function updateWorker(data) {
     incidentCount: data.incidentCount || 0,
   };
 
-  return Worker.findOneAndUpdate(
+  const worker = await Worker.findOneAndUpdate(
     { workerId: data.workerId },
     workerData,
     { new: true, upsert: true, setDefaultsOnInsert: true }
   );
+
+  return formatWorker(worker);
 }
 
 async function getWorkers() {
-  return Worker.find().sort({ workerId: 1 });
+  const workers = await Worker.find().sort({ workerId: 1 });
+
+  return workers.map(formatWorker);
 }
 
 async function restoreWorkerStatus(workerId) {
-  return Worker.findOneAndUpdate(
+  const worker = await Worker.findOneAndUpdate(
     { workerId },
     { status: WORKER_STATUS.NORMAL },
     { new: true }
   );
+
+  return formatWorker(worker);
+}
+
+async function markWorkerCalling(workerId) {
+  const worker = await Worker.findOneAndUpdate(
+    { workerId },
+    {
+      callStatus: WORKER_CALL_STATUS.CALLING,
+      lastCallAt: new Date(),
+    },
+    { new: true }
+  );
+
+  return formatWorker(worker);
+}
+
+async function markWorkerResponded(workerId) {
+  const worker = await Worker.findOneAndUpdate(
+    { workerId },
+    {
+      callStatus: WORKER_CALL_STATUS.RESPONDED,
+      lastResponseAt: new Date(),
+    },
+    { new: true }
+  );
+
+  return formatWorker(worker);
 }
 
 async function getWorkerIncidentHistory(workerId) {
@@ -92,5 +146,7 @@ module.exports = {
   updateWorker,
   getWorkers,
   restoreWorkerStatus,
+  markWorkerCalling,
+  markWorkerResponded,
   getWorkerIncidentHistory,
 };

@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const {
   WORKER_STATUS,
+  WORKER_CALL_STATUS,
 } = require("../utils/enums");
 
 const workerSchema = new mongoose.Schema({
@@ -32,6 +33,31 @@ const workerSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  callStatus: {
+    type: String,
+    enum: Object.values(WORKER_CALL_STATUS),
+    default: WORKER_CALL_STATUS.IDLE,
+  },
+  lastCallAt: {
+    type: Date,
+  },
+  lastResponseAt: {
+    type: Date,
+  },
 });
+
+workerSchema.virtual("responseSeconds").get(function () {
+  if (!this.lastCallAt || !this.lastResponseAt) {
+    return null;
+  }
+
+  return Math.max(
+    0,
+    Math.floor((this.lastResponseAt.getTime() - this.lastCallAt.getTime()) / 1000)
+  );
+});
+
+workerSchema.set("toJSON", { virtuals: true });
+workerSchema.set("toObject", { virtuals: true });
 
 module.exports = mongoose.model("Worker", workerSchema);

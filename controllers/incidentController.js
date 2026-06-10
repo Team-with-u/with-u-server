@@ -15,6 +15,11 @@ const {
 } = require("../utils/mqttPublisher");
 
 const {
+  getWorkers,
+  markWorkerCalling,
+} = require("../services/workerService");
+
+const {
   sendSuccess,
   sendError,
 } = require("../utils/response");
@@ -38,6 +43,18 @@ async function emitIncidentUpdates(req, incidentId) {
       timeline,
     });
   }
+}
+
+async function emitWorkerUpdates(req) {
+  const io = req.app.get("io");
+
+  if (!io) {
+    return;
+  }
+
+  const workers = await getWorkers();
+
+  io.emit("workers:update", workers);
 }
 
 exports.getActiveIncidents = async (req, res) => {
@@ -133,6 +150,14 @@ exports.callWorker = async (req, res) => {
     if (!incident) {
       return sendError(res, "사고를 찾을 수 없습니다", 404);
     }
+
+    const worker = await markWorkerCalling(incident.workerId);
+
+    if (!worker) {
+      return sendError(res, "작업자를 찾을 수 없습니다", 404);
+    }
+
+    await emitWorkerUpdates(req);
 
     await publishMessage("with-u/worker/call", {
       workerId: incident.workerId,
